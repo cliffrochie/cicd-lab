@@ -1,6 +1,24 @@
 FROM php:8.4-fpm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nginx \
+    git \
+    unzip \
+    libzip-dev \
+    && docker-php-ext-install zip \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
 WORKDIR /var/www/html
+
 COPY . .
-RUN composer install --no-dev
-CMD ["php-fpm"]
+
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+COPY docker/nginx.conf /etc/nginx/sites-available/default
+COPY docker/start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh \
+    && chown -R www-data:www-data storage bootstrap/cache database
+
+CMD ["/usr/local/bin/start.sh"]
